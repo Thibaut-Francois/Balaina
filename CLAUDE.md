@@ -8,6 +8,9 @@ Les données ne quittent jamais l'ordinateur : **n'ajouter aucune requête rése
 - `npm run dev` : serveur de développement
 - `npm test` : tests unitaires (Vitest) ; `npm run test:watch`
 - `npm run check` : vérification des types (svelte-check)
+- `node scripts/capture.mjs <url> <sortie.png> [l] [h]` : capture d'écran (Playwright) pour la vérification visuelle,
+  avec `npm run dev` lancé. En dev, l'URL accepte `?centre=P0009&zoom=1` (centrer sur une personne) et
+  `?graine=N&taille=T[&realiste]` (afficher un arbre aléatoire des tests).
 
 ## Stack
 Vite + TypeScript strict + Svelte 5 (runes). Rendu SVG. Zod pour valider les fichiers importés.
@@ -17,7 +20,17 @@ point d'union, couloirs au-dessus des cadres, écart de demi-fratrie) ne s'expri
 ## Architecture
 - `src/model/` : types, dates partielles, index de lecture, ordres (unions, enfants), validations. Fonctions pures.
 - `src/format/` : schéma Zod du fichier, migrations de version, import/export JSON.
-- `src/layout/` (phase 2) : placement pur et déterministe → `{ cadres, points, segments, bornes }`.
+- `src/layout/` : placement pur et déterministe → `{ cadres, points, segments, bornes, avertissements }`.
+  - `groupes.ts` : groupes de ligne (union-find sur les partenaires), générations (plus long chemin),
+    linéarisation (1 union : voisins ; 2 : un de chaque côté ; 3+ : même côté, ordre chronologique).
+    Cycles impossibles (union avec l'enfant de son partenaire, boucle d'unions) → union « coupée », reliée par un trait séparé + avertissement.
+  - `placement.ts` : ordre des lignes de haut en bas (un groupe se range sous la famille d'un seul membre « principal »,
+    choisi pour minimiser les croisements interdits), passe ascendante d'orientation, puis coordonnées x par
+    régression isotonique (moindres carrés sous écarts minimaux), allers-retours haut/bas.
+  - `routage.ts` : traits orthogonaux ; arches au-dessus des cadres pour les partenaires éloignés ; barres de fratrie
+    dans des couloirs entre lignes (pistes attribuées pour limiter les croisements) ; relais pour les filiations longues.
+- Tests du placement : `tests/invariants.ts` vérifie toutes les règles d'affichage ; il est appliqué à l'exemple,
+  à 100 arbres aléatoires « réalistes » et à 100 arbres « chaotiques ». Toute modification du placement doit les garder verts.
 - `src/ui/` : composants Svelte. `src/export/` (phase 5) : PDF, PNG/JPEG, impression.
 - `exemples/famille-complexe.json` : jeu de test de référence, à vérifier visuellement à chaque phase.
 
