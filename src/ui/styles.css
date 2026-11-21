@@ -1,0 +1,164 @@
+:root {
+  --fond: #f7f6f3;
+  --surface: #ffffff;
+  --texte: #1f1d1a;
+  --texte-doux: #5c5750;
+  --trait: #57534e;
+  --cadre-fond: #ffffff;
+  --cadre-bord: #b8b2a7;
+  --bordure: #e2ded6;
+  --accent: #2f5d8a;
+  --accent-texte: #ffffff;
+  --danger: #a3332b;
+  --avertissement: #8a5a00;
+  --ombre: 0 8px 28px rgb(0 0 0 / 0.14), 0 1px 3px rgb(0 0 0 / 0.08);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fond: #1b1a18;
+    --surface: #24221f;
+    --texte: #ece9e3;
+    --texte-doux: #aaa49a;
+    --trait: #a39d93;
+    --cadre-fond: #26241f;
+    --cadre-bord: #4d4840;
+    --bordure: #34312b;
+    --accent: #7fb0e0;
+    --accent-texte: #10161c;
+    --danger: #e0786f;
+    --avertissement: #e3b55a;
+    --ombre: 0 8px 28px rgb(0 0 0 / 0.5);
+    color-scheme: dark;
+  }
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--fond);
+  color: var(--texte);
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+}
+#app {
+  height: 100%;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+.bouton {
+  padding: 0.35rem 0.8rem;
+  border: 1px solid var(--cadre-bord);
+  border-radius: 6px;
+  background: var(--surface);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.bouton:hover:not(:disabled) {
+  border-color: var(--texte-doux);
+}
+.bouton:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.bouton.principal {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-texte);
+}
+.bouton.danger {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+.bouton.principal.danger {
+  background: var(--danger);
+  color: var(--surface);
+}
+.bouton-icone {
+  padding: 0.35rem 0.55rem;
+}
+
+.champ {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.75rem;
+}
+.champ > span {
+  font-size: 0.85rem;
+  color: var(--texte-doux);
+}
+.champ input:not([type='checkbox']):not([type='radio']),
+.champ select,
+.champ textarea {
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--cadre-bord);
+  border-radius: 6px;
+  background: var(--fond);
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.champ textarea {
+  resize: vertical;
+  min-height: 4rem;
+}
+.champ .erreur,
+.message-erreur {
+  color: var(--danger);
+  font-size: 0.85rem;
+}
+.aide {
+  color: var(--texte-doux);
+  font-size: 0.85rem;
+}
+.ligne-champs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 0.75rem;
+}
+.case {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+}
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* Panneaux latéraux (fiche d'une personne, union) */
+.panneau {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(340px, 100%);
+  box-sizing: border-box;
+  padding: 1rem 1.1rem;
+  overflow: auto;
+  background: var(--surface);
+  border-left: 1px solid var(--bordure);
+  box-shadow: var(--ombre);
+}
+.panneau > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+.panneau h2 {
+  font-size: 1.05rem;
+  margin: 0.2rem 0 0;
+  overflow-wrap: anywhere;
+}

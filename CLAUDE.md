@@ -7,10 +7,11 @@ Les données ne quittent jamais l'ordinateur : **n'ajouter aucune requête rése
 - `npm start` : build + serveur local + ouverture du navigateur (usage normal)
 - `npm run dev` : serveur de développement
 - `npm test` : tests unitaires (Vitest) ; `npm run test:watch`
+- `npm run test:e2e` : parcours de bout en bout dans un vrai navigateur (Playwright, `tests/e2e/`, lance son propre serveur sur le port 5174)
 - `npm run check` : vérification des types (svelte-check)
 - `node scripts/capture.mjs <url> <sortie.png> [l] [h]` : capture d'écran (Playwright) pour la vérification visuelle,
-  avec `npm run dev` lancé. En dev, l'URL accepte `?centre=P0009&zoom=1` (centrer sur une personne) et
-  `?graine=N&taille=T[&realiste]` (afficher un arbre aléatoire des tests).
+  avec `npm run dev` lancé. En dev, l'URL accepte `?exemple` (charger l'arbre d'exemple), `?centre=P0009&zoom=1`
+  (centrer sur une personne) et `?graine=N&taille=T[&realiste]` (afficher un arbre aléatoire des tests).
 
 ## Stack
 Vite + TypeScript strict + Svelte 5 (runes). Rendu SVG. Zod pour valider les fichiers importés.
@@ -19,6 +20,10 @@ point d'union, couloirs au-dessus des cadres, écart de demi-fratrie) ne s'expri
 
 ## Architecture
 - `src/model/` : types, dates partielles, index de lecture, ordres (unions, enfants), validations. Fonctions pures.
+  - `commandes.ts` : **toutes** les modifications (ajouter parent/enfant/partenaire, lier une personne existante,
+    modifier, supprimer, réordonner). Pures : renvoient un nouvel arbre ou une erreur lisible, vérifient la structure.
+- `src/etat/` : `historique.ts` (annuler/rétablir, fusion de la frappe dans un même champ) et
+  `document.svelte.ts` (état réactif). L'interface ne modifie l'arbre que via `documentArbre.executer(commande(...))`.
 - `src/format/` : schéma Zod du fichier, migrations de version, import/export JSON.
 - `src/layout/` : placement pur et déterministe → `{ cadres, points, segments, bornes, avertissements }`.
   - `groupes.ts` : groupes de ligne (union-find sur les partenaires), générations (plus long chemin),
