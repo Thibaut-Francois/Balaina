@@ -1,0 +1,28 @@
+{
+  "name": "balaina",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Application locale d'arbre généalogique",
+  "scripts": {
+    "start": "vite build && vite preview --open",
+    "dev": "vite --open",
+    "build": "vite build",
+    "check": "svelte-check --tsconfig ./tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^5.0.3",
+    "@tsconfig/svelte": "^5.0.4",
+    "@types/node": "^24.19.2",
+    "svelte": "^5.19.0",
+    "svelte-check": "^4.1.4",
+    "typescript": "^5.7.3",
+    "vite": "^6.0.11",
+    "vitest": "^3.0.4"
+  }
+}
