@@ -98,6 +98,54 @@ test('parcours complet : créer, ajouter, lier, annuler, rechercher, supprimer',
   await expect(cadres(page)).toHaveCount(4);
 });
 
+test('lier à une union existante : fratrie, autre parent, partenaire', async ({ page }) => {
+  await page.goto('/?exemple');
+  const points = page.locator('g.union');
+  await expect(points).toHaveCount(12);
+  const dlg = page.locator('dialog[open]');
+  const panneau = page.getByRole('complementary');
+
+  // Morgan (sans parents) rejoint la fratrie de Marcel et Jeanne (union de Jean et Louise)
+  await menu(page, 'Morgan Faure', 'Ajouter un parent');
+  await dlg.getByLabel('Rejoindre une fratrie existante').check();
+  await dlg.getByLabel('Rechercher un couple ou une fratrie').fill('jeanne');
+  await dlg.getByText('Jean Moreau et Louise Garnier').click();
+  await dlg.getByRole('button', { name: 'Ajouter', exact: true }).click();
+  await expect(points).toHaveCount(12); // aucune union créée
+  await page.locator('g.union').first().click(); // union de Jean et Louise
+  await expect(panneau).toContainText('Morgan Faure');
+  await panneau.getByLabel('Fermer').click();
+
+  // Union de Hugo avec un parent inconnu : on lie l'autre parent depuis le panneau de l'union
+  const pointHugo = page.locator('g.union').nth(10); // U0011, dans l'ordre des identifiants
+  await pointHugo.click();
+  await expect(panneau).toContainText('Union de Hugo Bernard et un parent inconnu');
+  await panneau.getByRole('button', { name: 'Ajouter l\'autre parent…' }).click();
+  await dlg.getByLabel('Lier une personne existante').check();
+  await dlg.getByText('Zoé Lambert').click();
+  await dlg.getByRole('button', { name: 'Ajouter', exact: true }).click();
+  await expect(panneau).toContainText('Union de Hugo Bernard et Zoé Lambert');
+
+  // Ajouter un enfant depuis le panneau de l'union
+  await panneau.getByRole('button', { name: 'Ajouter un enfant…' }).click();
+  await nouvellePersonne(page, 'Petit', 'Bernard');
+  await dlg.getByRole('button', { name: 'Ajouter', exact: true }).click();
+  await expect(panneau).toContainText('Petit Bernard');
+  await panneau.getByLabel('Fermer').click();
+
+  // Partenaire qui devient l'autre parent d'une union existante (au lieu d'une nouvelle union)
+  await menu(page, 'Lou Faure', 'Ajouter un enfant');
+  await nouvellePersonne(page, 'Bébé', 'Faure');
+  await dlg.getByRole('button', { name: 'Ajouter', exact: true }).click();
+  await expect(points).toHaveCount(13);
+  await menu(page, 'Lou Faure', 'Ajouter un partenaire');
+  await nouvellePersonne(page, 'Alex', 'Martin');
+  await dlg.getByLabel(/Devenir l'autre parent des enfants de Lou Faure/).check();
+  await dlg.getByRole('button', { name: 'Ajouter', exact: true }).click();
+  await expect(points).toHaveCount(13); // union complétée, pas de nouvelle union
+  await expect(page.locator('g.cadre', { hasText: 'Alex Martin' })).toHaveCount(1);
+});
+
 test('lier un descendant comme parent est impossible', async ({ page }) => {
   await page.goto('/?exemple');
   await expect(cadres(page)).toHaveCount(24);

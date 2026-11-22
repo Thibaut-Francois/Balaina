@@ -29,7 +29,7 @@
   let ficheOuverte = $state(false);
   let unionSelectionnee = $state<string | null>(null);
   let menu = $state<{ id: string; x: number; y: number } | null>(null);
-  let ajout = $state<{ mode: ModeAjout; personneId?: string } | null>(null);
+  let ajout = $state<{ mode: ModeAjout; personneId?: string; unionId?: string } | null>(null);
   let suppression = $state<string | null>(null);
   let exportation = $state<'exporter' | 'imprimer' | null>(null);
   let ouverture = $state<Exclude<ResultatOuverture, { statut: 'annule' }> | null>(null);
@@ -256,7 +256,11 @@
     {#if personneFiche}
       <FichePersonne personne={personneFiche} onfermer={() => (ficheOuverte = false)} />
     {:else if unionPanneau}
-      <PanneauUnion union={unionPanneau} onfermer={() => (unionSelectionnee = null)} />
+      <PanneauUnion
+        union={unionPanneau}
+        onfermer={() => (unionSelectionnee = null)}
+        onajouter={(mode) => (ajout = { mode, unionId: unionPanneau.id })}
+      />
     {/if}
   </main>
 </div>
@@ -265,6 +269,7 @@
   <DialogueAjout
     mode={ajout.mode}
     personneId={ajout.personneId}
+    unionId={ajout.unionId}
     onfermer={() => (ajout = null)}
     onajoute={(id) => {
       if (ajout?.mode === 'premiere') ouvrirFiche(id);

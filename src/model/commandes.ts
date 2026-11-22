@@ -1,4 +1,4 @@
-import { enfantsOrdonnes, estAscendant, indexer, parentsDe } from './index';
+import { enfantsOrdonnes, estAscendant, indexer, parentsDe, unionsChronologiques } from './index';
 import type { Arbre, Personne, TypeUnion, Union } from './types';
 import { erreursStructure, nomComplet } from './validate';
 
@@ -78,16 +78,56 @@ export function ajouterParent(arbre: Arbre, enfantId: string, parent: RefPersonn
   const uid = idx.unionParente.get(enfantId);
   const union = uid ? idx.unions.get(uid)! : undefined;
   if (union && union.partenaires.length >= 2) return echec(`${nom(arbre, enfantId)} a déjà deux parents.`);
-  if (union && 'id' in parent && union.partenaires[0] === parent.id) return echec('Cette personne est déjà parent.');
+  // Un seul parent connu : le nouveau parent complète cette union (toute la fratrie en profite).
+  if (union) return completerUnion(arbre, union.id, parent);
 
   const r = resoudre(arbre, parent);
   if ('erreur' in r) return echec(r.erreur);
-  let unions: Union[];
-  if (union) {
-    unions = r.arbre.unions.map((u) => (u.id === union.id ? { ...u, partenaires: [u.partenaires[0], r.id] } : u));
-  } else {
-    unions = [...r.arbre.unions, { id: nouvelIdUnion(r.arbre), partenaires: [r.id], type: 'non_precise', enfants: [enfantId] }];
+  const unions = [...r.arbre.unions, { id: nouvelIdUnion(r.arbre), partenaires: [r.id] as Union['partenaires'], type: 'non_precise' as const, enfants: [enfantId] }];
+  return conclure({ ...r.arbre, unions }, r.id);
+}
+
+/**
+ * Rattache une personne (nouvelle ou existante) comme enfant d'une union existante :
+ * elle rejoint la fratrie de cette union.
+ */
+export function rattacherEnfant(arbre: Arbre, unionId: string, enfant: RefPersonne): Resultat {
+  const idx = indexer(arbre);
+  const u = idx.unions.get(unionId);
+  if (!u) return echec('Union introuvable.');
+  if ('id' in enfant) {
+    if (u.partenaires.includes(enfant.id)) return echec('Une personne ne peut pas être son propre enfant.');
+    if (idx.unionParente.has(enfant.id)) return echec(`${nom(arbre, enfant.id)} a déjà des parents dans l'arbre.`);
+    const ascendant = u.partenaires.find((p) => estAscendant(idx, enfant.id, p));
+    if (ascendant)
+      return echec(`${nom(arbre, enfant.id)} est un ascendant de ${nom(arbre, ascendant)} : ce lien créerait une boucle.`);
   }
+  const r = resoudre(arbre, enfant);
+  if ('erreur' in r) return echec(r.erreur);
+  const unions = r.arbre.unions.map((x) => (x.id === unionId ? { ...x, enfants: [...x.enfants, r.id] } : x));
+  return conclure({ ...r.arbre, unions }, r.id);
+}
+
+/**
+ * Complète une union dont l'autre parent est inconnu avec une personne (nouvelle ou existante) :
+ * elle devient le second partenaire, et donc le parent de tous les enfants de cette union.
+ */
+export function completerUnion(arbre: Arbre, unionId: string, partenaire: RefPersonne): Resultat {
+  const idx = indexer(arbre);
+  const u = idx.unions.get(unionId);
+  if (!u) return echec('Union introuvable.');
+  if (u.partenaires.length >= 2) return echec('Cette union a déjà deux partenaires.');
+  if ('id' in partenaire) {
+    if (u.partenaires[0] === partenaire.id) return echec('Cette personne est déjà partenaire de cette union.');
+    const descendant = u.enfants.find((e) => e === partenaire.id || estAscendant(idx, e, partenaire.id));
+    if (descendant !== undefined)
+      return echec(`${nom(arbre, partenaire.id)} descend de cette union : ce lien créerait une boucle.`);
+  }
+  const r = resoudre(arbre, partenaire);
+  if ('erreur' in r) return echec(r.erreur);
+  const unions = r.arbre.unions.map((x) =>
+    x.id === unionId ? { ...x, partenaires: [x.partenaires[0], r.id] as Union['partenaires'] } : x,
+  );
   return conclure({ ...r.arbre, unions }, r.id);
 }
 
@@ -103,31 +143,40 @@ export function ajouterEnfant(arbre: Arbre, parentId: string, cible: CibleEnfant
     if (estAscendant(idx, enfant.id, parentId))
       return echec(`${nom(arbre, enfant.id)} est un ascendant de ${nom(arbre, parentId)} : ce lien créerait une boucle.`);
   }
-  let courant = arbre;
-  let unionId: string;
   if ('union' in cible) {
     const u = idx.unions.get(cible.union);
     if (!u || !u.partenaires.includes(parentId)) return echec('Union introuvable.');
-    unionId = u.id;
-  } else {
-    let partenaires: Union['partenaires'] = [parentId];
-    if ('partenaire' in cible) {
-      if ('id' in cible.partenaire && cible.partenaire.id === parentId) return echec('Choisissez un autre partenaire.');
-      const rp = resoudre(courant, cible.partenaire);
-      if ('erreur' in rp) return echec(rp.erreur);
-      courant = rp.arbre;
-      partenaires = [parentId, rp.id];
-    }
-    unionId = nouvelIdUnion(courant);
-    courant = { ...courant, unions: [...courant.unions, { id: unionId, partenaires, type: 'non_precise', enfants: [] }] };
+    return rattacherEnfant(arbre, u.id, enfant);
   }
+  // Partenaire existant déjà uni à ce parent : l'enfant rejoint leur union (la plus récente),
+  // plutôt que de créer une union en double.
+  if ('partenaire' in cible && 'id' in cible.partenaire) {
+    const q = cible.partenaire.id;
+    const communes = unionsChronologiques(idx, parentId).filter((uid) => idx.unions.get(uid)!.partenaires.includes(q));
+    if (communes.length > 0) return rattacherEnfant(arbre, communes[communes.length - 1]!, enfant);
+  }
+  // Nouvelle union : avec un nouveau partenaire ou avec l'autre parent inconnu.
+  let courant = arbre;
+  let partenaires: Union['partenaires'] = [parentId];
+  if ('partenaire' in cible) {
+    if ('id' in cible.partenaire && cible.partenaire.id === parentId) return echec('Choisissez un autre partenaire.');
+    const rp = resoudre(courant, cible.partenaire);
+    if ('erreur' in rp) return echec(rp.erreur);
+    courant = rp.arbre;
+    partenaires = [parentId, rp.id];
+  }
+  const unionId = nouvelIdUnion(courant);
+  courant = { ...courant, unions: [...courant.unions, { id: unionId, partenaires, type: 'non_precise', enfants: [] }] };
   const re = resoudre(courant, enfant);
   if ('erreur' in re) return echec(re.erreur);
   const unions = re.arbre.unions.map((u) => (u.id === unionId ? { ...u, enfants: [...u.enfants, re.id] } : u));
   return conclure({ ...re.arbre, unions }, re.id);
 }
 
-/** Ajoute un partenaire : crée toujours une nouvelle union. */
+/**
+ * Ajoute un partenaire : crée une nouvelle union. Pour faire de ce partenaire l'autre parent
+ * d'une union existante (parent jusque-là inconnu), utiliser `completerUnion`.
+ */
 export function ajouterPartenaire(arbre: Arbre, personneId: string, partenaire: RefPersonne): Resultat {
   if ('id' in partenaire && partenaire.id === personneId) return echec('Choisissez une autre personne.');
   const r = resoudre(arbre, partenaire);

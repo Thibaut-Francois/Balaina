@@ -3,6 +3,8 @@ import {
   ajouterEnfant,
   ajouterParent,
   ajouterPartenaire,
+  completerUnion,
+  rattacherEnfant,
   creerPersonne,
   deplacerEnfant,
   liensDePersonne,
@@ -110,6 +112,61 @@ describe('ajouter un enfant', () => {
     a = ok(ajouterEnfant(a, 'P0001', { autreParentInconnu: true }, nouvelle('B'))).arbre;
     const r = ajouterEnfant(a, 'P0002', { autreParentInconnu: true }, { id: 'P0001' });
     expect(r.ok).toBe(false);
+  });
+});
+
+describe('lier à une union existante', () => {
+  // Personne isolée, sans parents ni union, ajoutée à l'exemple.
+  const avecIsole = () => ok(creerPersonne(chargerExemple(), { prenoms: 'Isolé', nom: 'X' }));
+
+  it('rattacher une personne existante à une fratrie existante', () => {
+    const { arbre, id } = avecIsole();
+    const r = ok(rattacherEnfant(arbre, 'U0005', { id: id! }));
+    expect(r.arbre.unions.find((u) => u.id === 'U0005')!.enfants).toEqual(['P0013', 'P0012', id]);
+  });
+
+  it('rattacher une nouvelle personne à une fratrie', () => {
+    const r = ok(rattacherEnfant(chargerExemple(), 'U0011', nouvelle('Petit frère de Maël')));
+    expect(r.arbre.unions.find((u) => u.id === 'U0011')!.enfants).toEqual(['P0023', r.id]);
+  });
+
+  it('refuse une personne qui a déjà des parents, un partenaire de l’union ou un ascendant', () => {
+    const a = chargerExemple();
+    expect(rattacherEnfant(a, 'U0005', { id: 'P0015' }).ok).toBe(false); // Inès a déjà des parents
+    expect(rattacherEnfant(a, 'U0005', { id: 'P0009' }).ok).toBe(false); // Camille, partenaire de l'union
+    // Jean (ancêtre de Camille, sans parents) ne peut pas devenir l'enfant de Camille
+    const r = rattacherEnfant(a, 'U0005', { id: 'P0001' });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.erreur).toMatch(/boucle/);
+  });
+
+  it('compléter une union dont l’autre parent est inconnu, avec une personne existante', () => {
+    const { arbre, id } = avecIsole();
+    const r = ok(completerUnion(arbre, 'U0011', { id: id! }));
+    expect(r.arbre.unions.find((u) => u.id === 'U0011')!.partenaires).toEqual(['P0013', id]);
+    expect(r.arbre.unions).toHaveLength(arbre.unions.length); // aucune union créée
+  });
+
+  it('compléter : refusé si l’union a deux partenaires, ou si la personne en descend', () => {
+    const a = chargerExemple();
+    expect(completerUnion(a, 'U0005', nouvelle('X')).ok).toBe(false);
+    expect(completerUnion(a, 'U0011', { id: 'P0023' }).ok).toBe(false); // Maël, enfant de cette union
+  });
+
+  it('ajouter un parent à un enfant qui n’a qu’un parent connu complète la même union (toute la fratrie)', () => {
+    let a = ok(rattacherEnfant(chargerExemple(), 'U0011', nouvelle('Sœur de Maël'))).arbre;
+    const r = ok(ajouterParent(a, 'P0023', nouvelle('Autre parent')));
+    a = r.arbre;
+    const u = a.unions.find((x) => x.id === 'U0011')!;
+    expect(u.partenaires).toEqual(['P0013', r.id]);
+    expect(u.enfants).toHaveLength(2);
+  });
+
+  it('enfant « avec un nouveau partenaire » qui est déjà uni au parent : l’union existante est réutilisée', () => {
+    const a = chargerExemple();
+    const r = ok(ajouterEnfant(a, 'P0009', { partenaire: { id: 'P0014' } }, nouvelle('Enfant')));
+    expect(r.arbre.unions).toHaveLength(a.unions.length);
+    expect(r.arbre.unions.find((u) => u.id === 'U0006')!.enfants).toEqual(['P0015', r.id]);
   });
 });
 

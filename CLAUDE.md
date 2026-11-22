@@ -21,6 +21,7 @@ point d'union, couloirs au-dessus des cadres, écart de demi-fratrie) ne s'expri
 ## Architecture
 - `src/model/` : types, dates partielles, index de lecture, ordres (unions, enfants), validations. Fonctions pures.
   - `commandes.ts` : **toutes** les modifications (ajouter parent/enfant/partenaire, lier une personne existante,
+    rattacher un enfant à une fratrie existante (`rattacherEnfant`), compléter une union à parent inconnu (`completerUnion`),
     modifier, supprimer, réordonner). Pures : renvoient un nouvel arbre ou une erreur lisible, vérifient la structure.
 - `src/etat/` : `historique.ts` (annuler/rétablir, fusion de la frappe dans un même champ) et
   `document.svelte.ts` (état réactif). L'interface ne modifie l'arbre que via `documentArbre.executer(commande(...))`.

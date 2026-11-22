@@ -6,7 +6,11 @@
   import ChampDate from './ChampDate.svelte';
   import { datesAffichees, nomAffiche } from './texte';
 
-  let { union, onfermer }: { union: Union; onfermer: () => void } = $props();
+  let {
+    union,
+    onfermer,
+    onajouter,
+  }: { union: Union; onfermer: () => void; onajouter: (mode: 'enfant-union' | 'parent-union') => void } = $props();
 
   const idx = $derived(indexer(documentArbre.arbre));
   const titre = $derived(
@@ -47,6 +51,11 @@
     <ChampDate libelle="Fin" valeur={union.fin} onchange={(d) => modifier('fin', { fin: d ?? null })} />
   </div>
 
+  {#if union.partenaires.length === 1}
+    <p class="aide">L'autre parent est inconnu.</p>
+    <button type="button" class="bouton" onclick={() => onajouter('parent-union')}>Ajouter l'autre parent…</button>
+  {/if}
+
   <h3>Enfants</h3>
   {#if enfants.length === 0}
     <p class="aide">Aucun enfant.</p>
@@ -65,6 +74,8 @@
     </ol>
     <p class="aide">Les enfants sont triés par date de naissance ; ceux sans date se placent en fin de groupe et se réordonnent avec les flèches.</p>
   {/if}
+
+  <button type="button" class="bouton" onclick={() => onajouter('enfant-union')}>Ajouter un enfant…</button>
 
   <div class="suppression">
     {#if confirmerSuppression}
