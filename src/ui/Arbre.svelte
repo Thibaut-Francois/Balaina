@@ -205,11 +205,11 @@
     stroke-width: 2;
   }
   .nom {
-    font: 600 13px system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    font: 600 13px 'Inter Balaina', sans-serif;
     fill: var(--texte);
   }
   .dates {
-    font: 400 12px system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    font: 400 12px 'Inter Balaina', sans-serif;
     fill: var(--texte-doux);
   }
   .union {

@@ -1,8 +1,16 @@
 import { formaterDate } from '../model/dates';
 import type { Personne } from '../model/types';
 
-export const POLICE_NOM = '600 13px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
-export const POLICE_DATES = '400 12px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+/** Police des cadres, embarquée (voir styles.css) ; identique à l'écran et dans les exports. */
+export const FAMILLE_POLICE = 'Inter Balaina';
+export const POLICE_NOM = `600 13px "${FAMILLE_POLICE}"`;
+export const POLICE_DATES = `400 12px "${FAMILLE_POLICE}"`;
+
+/** Attend que la police soit prête : les mesures de troncature en dépendent. */
+export async function chargerPolices(): Promise<void> {
+  if (typeof document === 'undefined' || !document.fonts) return;
+  await Promise.all([document.fonts.load(POLICE_NOM, 'Aé°†'), document.fonts.load(POLICE_DATES, 'Aé°†')]);
+}
 
 export function nomAffiche(p: Personne): string {
   return [p.prenoms, p.nom].map((s) => s.trim()).filter(Boolean).join(' ') || 'Sans nom';

@@ -78,8 +78,8 @@ export async function ecrireFichier(handle: FileSystemFileHandle, texte: string)
 }
 
 /** Téléchargement d'un nouveau fichier (navigateurs sans accès direct). */
-export function telecharger(texte: string, nom: string, type = 'application/json'): void {
-  const url = URL.createObjectURL(new Blob([texte], { type }));
+export function telecharger(contenu: string | Blob, nom: string, type = 'application/json'): void {
+  const url = URL.createObjectURL(typeof contenu === 'string' ? new Blob([contenu], { type }) : contenu);
   const a = document.createElement('a');
   a.href = url;
   a.download = nom;

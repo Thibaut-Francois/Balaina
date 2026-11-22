@@ -1,3 +1,17 @@
+/* Police embarquée (aucun téléchargement) : la même à l'écran, dans le PDF et dans les images. */
+@font-face {
+  font-family: 'Inter Balaina';
+  src: url('../assets/polices/Inter_400Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-display: block;
+}
+@font-face {
+  font-family: 'Inter Balaina';
+  src: url('../assets/polices/Inter_600SemiBold.ttf') format('truetype');
+  font-weight: 600;
+  font-display: block;
+}
+
 :root {
   --fond: #f7f6f3;
   --surface: #ffffff;
@@ -161,4 +175,50 @@ textarea {
   font-size: 1.05rem;
   margin: 0.2rem 0 0;
   overflow-wrap: anywhere;
+}
+
+/* Famille des exports (impression, PDF, images) : « bold » = SemiBold, comme dans le PDF. */
+@font-face {
+  font-family: 'Inter Balaina Export';
+  src: url('../assets/polices/Inter_400Regular.ttf') format('truetype');
+  font-weight: 400;
+}
+@font-face {
+  font-family: 'Inter Balaina Export';
+  src: url('../assets/polices/Inter_600SemiBold.ttf') format('truetype');
+  font-weight: 700;
+}
+
+/* Impression : seule la zone d'impression est visible. */
+#zone-impression {
+  display: none;
+}
+@media print {
+  body > *:not(#zone-impression) {
+    display: none !important;
+  }
+  html,
+  body {
+    background: #fff !important;
+    height: auto;
+  }
+  #zone-impression {
+    display: block;
+  }
+  #zone-impression .page {
+    position: relative;
+    overflow: hidden;
+    break-after: page;
+    box-sizing: border-box;
+  }
+  #zone-impression .page:last-child {
+    break-after: auto;
+  }
+  #zone-impression .repere {
+    position: absolute;
+    right: 10mm;
+    bottom: 4mm;
+    font: 7pt 'Inter Balaina Export', sans-serif;
+    color: #777;
+  }
 }

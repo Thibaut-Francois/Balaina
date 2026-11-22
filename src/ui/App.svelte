@@ -9,13 +9,14 @@
   import { indexer } from '../model/index';
   import Arbre from './Arbre.svelte';
   import DialogueAjout from './DialogueAjout.svelte';
+  import DialogueExport from './DialogueExport.svelte';
   import DialogueOuverture from './DialogueOuverture.svelte';
   import DialogueSuppression from './DialogueSuppression.svelte';
   import FichePersonne from './FichePersonne.svelte';
   import MenuPersonne from './MenuPersonne.svelte';
   import PanneauUnion from './PanneauUnion.svelte';
   import Recherche from './Recherche.svelte';
-  import { nomAffiche } from './texte';
+  import { chargerPolices, nomAffiche } from './texte';
   import type { ModeAjout } from './types';
 
   const arbre = $derived(documentArbre.arbre);
@@ -30,6 +31,7 @@
   let menu = $state<{ id: string; x: number; y: number } | null>(null);
   let ajout = $state<{ mode: ModeAjout; personneId?: string } | null>(null);
   let suppression = $state<string | null>(null);
+  let exportation = $state<'exporter' | 'imprimer' | null>(null);
   let ouverture = $state<Exclude<ResultatOuverture, { statut: 'annule' }> | null>(null);
   /** Message bref en bas de l'écran (enregistrement réussi, erreur…). */
   let message = $state<{ texte: string; erreur?: boolean } | null>(null);
@@ -98,6 +100,7 @@
   };
 
   onMount(async () => {
+    await chargerPolices();
     await sauvegarde.demarrer();
     // En développement, `?exemple` charge l'arbre d'exemple.
     const params = new URLSearchParams(location.search);
@@ -120,6 +123,12 @@
 
   function clavier(e: KeyboardEvent) {
     const mod = e.ctrlKey || e.metaKey;
+    if (mod && e.key.toLowerCase() === 'p') {
+      // Ctrl+P : nos options d'impression (format, pages) plutôt que l'impression brute de l'écran
+      e.preventDefault();
+      if (arbre.personnes.length > 0) exportation = 'imprimer';
+      return;
+    }
     if (mod && (e.key.toLowerCase() === 's' || e.key.toLowerCase() === 'o')) {
       e.preventDefault();
       if (e.key.toLowerCase() === 's') enregistrer(e.shiftKey);
@@ -171,6 +180,10 @@
     </div>
     {#if arbre.personnes.length > 0}
       <button type="button" class="bouton" onclick={() => vue?.ajuster()}>Ajuster à l'écran</button>
+      <div class="groupe">
+        <button type="button" class="bouton" onclick={() => (exportation = 'exporter')} title="PDF, PNG ou JPEG de tout l'arbre">Exporter…</button>
+        <button type="button" class="bouton" onclick={() => (exportation = 'imprimer')} title="Imprimer tout l'arbre (Ctrl+P)">Imprimer…</button>
+      </div>
     {/if}
     {#if placement.avertissements.length > 0}
       <span class="avertissement" title={placement.avertissements.join('\n')}>
@@ -258,6 +271,9 @@
       else personneSelectionnee = id;
     }}
   />
+{/if}
+{#if exportation}
+  <DialogueExport mode={exportation} {placement} onfermer={() => (exportation = null)} oninformer={informer} />
 {/if}
 {#if ouverture}
   <DialogueOuverture resultat={ouverture} onfermer={() => (ouverture = null)} />

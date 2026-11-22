@@ -40,7 +40,15 @@ point d'union, couloirs au-dessus des cadres, écart de demi-fratrie) ne s'expri
     dans des couloirs entre lignes (pistes attribuées pour limiter les croisements) ; relais pour les filiations longues.
 - Tests du placement : `tests/invariants.ts` vérifie toutes les règles d'affichage ; il est appliqué à l'exemple,
   à 100 arbres aléatoires « réalistes » et à 100 arbres « chaotiques ». Toute modification du placement doit les garder verts.
-- `src/ui/` : composants Svelte. `src/export/` (phase 5) : PDF, PNG/JPEG, impression.
+- `src/ui/` : composants Svelte.
+- `src/export/` : `svg.ts` construit un SVG autonome de tout l'arbre (fond blanc, couleurs fixes, attributs de
+  présentation uniquement) utilisé par les trois sorties : `pdf.ts` (jsPDF + svg2pdf.js, vectoriel, chargé à la demande),
+  `image.ts` (PNG/JPEG via canvas, polices intégrées en data URI, limites de taille du navigateur), `impression.ts`
+  (zone `#zone-impression` + `@page`). `pagination.ts` : mise en page pure (format, orientation auto, une page ou
+  taille réelle découpée en pages ; 1 px = 1/96 de pouce).
+- Police : Inter (OFL, `src/assets/polices/`), embarquée. Famille `Inter Balaina` à l'écran (400/600) et
+  `Inter Balaina Export` dans les exports (400 = normal, 700 = fichier SemiBold, pour correspondre au « bold » de jsPDF).
+  Les troncatures sont mesurées avec cette police : attendre `chargerPolices()` avant tout rendu.
 - `exemples/famille-complexe.json` : jeu de test de référence, à vérifier visuellement à chaque phase.
 
 ## Règles du modèle (ne pas enfreindre)
