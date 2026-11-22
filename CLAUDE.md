@@ -41,8 +41,7 @@ point d'union, couloirs au-dessus des cadres, écart de demi-fratrie) ne s'expri
   - `placement.ts` : ordre des lignes de haut en bas (un groupe se range sous la famille d'un seul membre « principal »,
     choisi pour minimiser les croisements interdits), passe ascendante d'orientation, puis coordonnées x par
     régression isotonique (moindres carrés sous écarts minimaux), allers-retours haut/bas.
-  - `optimisation.ts` (+ `optimisation.worker.ts`, lancé par `src/ui/recalcul.ts`) : case « Recalculer d'abord la disposition »
-    de la boîte Exporter/Imprimer (appliqué à l'arbre, annulable, puis export). Cherche l'ordre des groupes de chaque
+  - `optimisation.ts` (+ `optimisation.worker.ts`) : bouton « Recalculer ». Cherche l'ordre des groupes de chaque
     ligne qui minimise (croisements interdits, croisements, longueur des traits) : balayages par barycentre puis
     recherche locale, chaque essai évalué sur le placement réel. Déterministe (graine tirée de la disposition actuelle).
     Le résultat est stocké dans `arbre.affichage.ordre` (champ facultatif, format v2) : il fixe l'ordre des groupes
@@ -55,7 +54,7 @@ point d'union, couloirs au-dessus des cadres, écart de demi-fratrie) ne s'expri
 - `src/export/` : `svg.ts` construit un SVG autonome de tout l'arbre (fond blanc, couleurs fixes, attributs de
   présentation uniquement) utilisé par les trois sorties : `pdf.ts` (jsPDF + svg2pdf.js, vectoriel, chargé à la demande),
   `image.ts` (PNG/JPEG via canvas, polices intégrées en data URI, limites de taille du navigateur), `impression.ts`
-  (zone `#zone-impression` + `@page`). `pagination.ts` : mise en page pure (format, orientation auto, une page ou
+  (zone `#zone-impression` + `@page`). L'impression est un des formats de la boîte « Exporter… » (Ctrl+P l'ouvre sur ce choix). `pagination.ts` : mise en page pure (format, orientation auto, une page ou
   taille réelle découpée en pages ; 1 px = 1/96 de pouce).
 - Police : Inter (OFL, `src/assets/polices/`), embarquée. Famille `Inter Balaina` à l'écran (400/600) et
   `Inter Balaina Export` dans les exports (400 = normal, 700 = fichier SemiBold, pour correspondre au « bold » de jsPDF).

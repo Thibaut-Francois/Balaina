@@ -44,6 +44,7 @@ test('PDF taille réelle sur plusieurs pages', async ({ page }) => {
     await dlg.getByLabel('Taille réelle sur plusieurs pages').check();
     annonce = (await dlg.locator('.resume').textContent()) ?? '';
   });
+  await expect(page.getByRole('button', { name: 'Imprimer…' })).toHaveCount(0);
   const n = Number(/^(\d+) pages/.exec(annonce)?.[1]);
   expect(n).toBeGreaterThan(1);
   expect(octets.toString('latin1').match(/\/Type \/Page\b/g)).toHaveLength(n);
@@ -78,11 +79,11 @@ test('impression : pages préparées, interface masquée, fond blanc', async ({ 
   await expect(page.locator('g.cadre')).toHaveCount(24);
   await page.keyboard.press('Control+p');
   const dlg = page.locator('dialog[open]');
-  await expect(dlg).toContainText('Imprimer l’arbre');
+  await expect(dlg.getByLabel('Imprimer')).toBeChecked();
   await dlg.getByLabel('Papier').selectOption('A4');
   await dlg.getByLabel('Taille réelle sur plusieurs pages').check();
   const n = Number(/^(\d+) pages/.exec((await dlg.locator('.resume').textContent()) ?? '')?.[1]);
-  await dlg.getByRole('button', { name: 'Imprimer' }).click();
+  await dlg.getByRole('button', { name: 'Imprimer', exact: true }).click();
   await expect.poll(() => page.evaluate(() => (window as any).__imprime)).toBe(true);
   await expect(page.locator('#zone-impression .page')).toHaveCount(n);
   await expect(page.locator('#zone-impression .page svg')).toHaveCount(n);
