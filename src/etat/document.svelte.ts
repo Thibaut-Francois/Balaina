@@ -31,6 +31,12 @@ class DocumentArbre {
     return { ok: true, ...(resultat.id ? { id: resultat.id } : {}) };
   }
 
+  /** Arbre retrouvé au démarrage : remplace tout, sans historique (rien à annuler). */
+  initialiser(arbre: Arbre) {
+    this.historique = new Historique<Arbre>(arbre);
+    this.synchroniser();
+  }
+
   /** Remplace l'arbre entier (import, exemple). Annulable. */
   remplacer(arbre: Arbre) {
     this.historique.remplacer(arbre);

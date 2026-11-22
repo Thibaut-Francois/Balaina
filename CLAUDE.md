@@ -24,6 +24,10 @@ point d'union, couloirs au-dessus des cadres, écart de demi-fratrie) ne s'expri
     modifier, supprimer, réordonner). Pures : renvoient un nouvel arbre ou une erreur lisible, vérifient la structure.
 - `src/etat/` : `historique.ts` (annuler/rétablir, fusion de la frappe dans un même champ) et
   `document.svelte.ts` (état réactif). L'interface ne modifie l'arbre que via `documentArbre.executer(commande(...))`.
+  - `sauvegarde.svelte.ts` : sauvegarde automatique dans IndexedDB (base `balaina`, stockée **au format du fichier
+    exporté** pour bénéficier des migrations), suivi « modifications non exportées », ouvrir / enregistrer.
+- `src/format/fichiers.ts` : File System Access (Chrome/Edge : « Enregistrer » réécrit le fichier ouvert, handle
+  mémorisé dans IndexedDB) avec repli sur `<input type=file>` et téléchargement. `suivi.ts` : logique pure du suivi d'export.
 - `src/format/` : schéma Zod du fichier, migrations de version, import/export JSON.
 - `src/layout/` : placement pur et déterministe → `{ cadres, points, segments, bornes, avertissements }`.
   - `groupes.ts` : groupes de ligne (union-find sur les partenaires), générations (plus long chemin),

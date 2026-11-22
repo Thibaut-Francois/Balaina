@@ -1,11 +1,15 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import { documentArbre } from '../etat/document.svelte';
+  import { sauvegarde, type ResultatOuverture } from '../etat/sauvegarde.svelte';
+  import { accesDirectDisponible } from '../format/fichiers';
+  import { formaterInstant } from '../format/suivi';
   import { importerJSON } from '../format/io';
   import { calculerPlacement } from '../layout/index';
   import { indexer } from '../model/index';
   import Arbre from './Arbre.svelte';
   import DialogueAjout from './DialogueAjout.svelte';
+  import DialogueOuverture from './DialogueOuverture.svelte';
   import DialogueSuppression from './DialogueSuppression.svelte';
   import FichePersonne from './FichePersonne.svelte';
   import MenuPersonne from './MenuPersonne.svelte';
@@ -26,6 +30,36 @@
   let menu = $state<{ id: string; x: number; y: number } | null>(null);
   let ajout = $state<{ mode: ModeAjout; personneId?: string } | null>(null);
   let suppression = $state<string | null>(null);
+  let ouverture = $state<Exclude<ResultatOuverture, { statut: 'annule' }> | null>(null);
+  /** Message bref en bas de l'écran (enregistrement réussi, erreur…). */
+  let message = $state<{ texte: string; erreur?: boolean } | null>(null);
+  let minuterieMessage: ReturnType<typeof setTimeout> | undefined;
+  function informer(texte: string, erreur = false) {
+    message = { texte, erreur };
+    clearTimeout(minuterieMessage);
+    minuterieMessage = setTimeout(() => (message = null), erreur ? 8000 : 3500);
+  }
+
+  // Sauvegarde automatique : chaque modification est suivie.
+  $effect(() => {
+    void documentArbre.version;
+    untrack(() => sauvegarde.surModification());
+  });
+
+  async function ouvrir() {
+    try {
+      const r = await sauvegarde.ouvrir();
+      if (r.statut !== 'annule') ouverture = r;
+    } catch (e) {
+      informer(`Impossible de lire le fichier : ${e instanceof Error ? e.message : e}`, true);
+    }
+  }
+
+  async function enregistrer(sousUnNouveauNom = false) {
+    const r = await sauvegarde.enregistrer(sousUnNouveauNom);
+    if (r.ok) informer(`Arbre enregistré dans « ${r.nom} ».`);
+    else if (r.erreur) informer(`L'enregistrement a échoué : ${r.erreur}`, true);
+  }
 
   const personneFiche = $derived(ficheOuverte && personneSelectionnee ? idx.personnes.get(personneSelectionnee) : undefined);
   const unionPanneau = $derived(unionSelectionnee ? idx.unions.get(unionSelectionnee) : undefined);
@@ -63,8 +97,9 @@
     return t.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(t.tagName);
   };
 
-  onMount(() => {
-    // En développement, `?exemple` charge l'arbre d'exemple (en attendant l'import, phase 4).
+  onMount(async () => {
+    await sauvegarde.demarrer();
+    // En développement, `?exemple` charge l'arbre d'exemple.
     const params = new URLSearchParams(location.search);
     if (import.meta.env.DEV && params.has('exemple')) {
       import('../../exemples/famille-complexe.json').then((m) => {
@@ -85,6 +120,12 @@
 
   function clavier(e: KeyboardEvent) {
     const mod = e.ctrlKey || e.metaKey;
+    if (mod && (e.key.toLowerCase() === 's' || e.key.toLowerCase() === 'o')) {
+      e.preventDefault();
+      if (e.key.toLowerCase() === 's') enregistrer(e.shiftKey);
+      else ouvrir();
+      return;
+    }
     if (mod && !dansUnChamp(e)) {
       const touche = e.key.toLowerCase();
       if (touche === 'z' && !e.shiftKey) {
@@ -104,6 +145,23 @@
 <div class="app">
   <header>
     <h1>Balaina</h1>
+    <div class="groupe">
+      <button type="button" class="bouton" onclick={ouvrir} title="Ouvrir un fichier d'arbre (Ctrl+O)">Ouvrir…</button>
+      <button
+        type="button"
+        class="bouton"
+        onclick={() => enregistrer()}
+        disabled={arbre.personnes.length === 0 && !sauvegarde.nomFichier}
+        title={sauvegarde.peutReecrire
+          ? `Réécrire « ${sauvegarde.nomFichier} » (Ctrl+S)`
+          : accesDirectDisponible()
+            ? 'Choisir où enregistrer le fichier (Ctrl+S)'
+            : 'Télécharger un fichier .json (Ctrl+S)'}>Enregistrer</button
+      >
+      {#if accesDirectDisponible()}
+        <button type="button" class="bouton" onclick={() => enregistrer(true)} disabled={arbre.personnes.length === 0} title="Enregistrer dans un nouveau fichier (Ctrl+Maj+S)">Enregistrer sous…</button>
+      {/if}
+    </div>
     {#if arbre.personnes.length > 0}
       <Recherche personnes={arbre.personnes} onchoisir={choisirRecherche} />
     {/if}
@@ -119,13 +177,29 @@
         ⚠ {placement.avertissements.length} union{placement.avertissements.length > 1 ? 's' : ''} dessinée{placement.avertissements.length > 1 ? 's' : ''} à part
       </span>
     {/if}
+    <span class="espace"></span>
+    {#if sauvegarde.erreurStockage}
+      <span class="etat-sauvegarde alerte" role="status">⚠ {sauvegarde.erreurStockage}</span>
+    {:else if sauvegarde.modifieDepuis}
+      <span
+        class="etat-sauvegarde"
+        role="status"
+        title="Les modifications sont gardées automatiquement dans ce navigateur, mais ce stockage peut disparaître (nettoyage, autre navigateur…). Le fichier enregistré est la vraie sauvegarde."
+        >● Modifications non exportées depuis {formaterInstant(sauvegarde.modifieDepuis)}</span
+      >
+    {:else if sauvegarde.nomFichier}
+      <span class="etat-sauvegarde" role="status" title="Le contenu de l'arbre correspond au dernier fichier enregistré.">✓ {sauvegarde.nomFichier}</span>
+    {/if}
   </header>
 
   <main>
-    {#if arbre.personnes.length === 0}
+    {#if !sauvegarde.chargee}
+      <div class="vide">Chargement…</div>
+    {:else if arbre.personnes.length === 0}
       <div class="vide">
         <p>L'arbre est vide.</p>
         <button type="button" class="bouton principal" onclick={() => (ajout = { mode: 'premiere' })}>Créer la première personne</button>
+        <button type="button" class="bouton" onclick={ouvrir}>Ouvrir un fichier…</button>
       </div>
     {:else}
       <Arbre
@@ -185,6 +259,12 @@
     }}
   />
 {/if}
+{#if ouverture}
+  <DialogueOuverture resultat={ouverture} onfermer={() => (ouverture = null)} />
+{/if}
+{#if message}
+  <div class="message" class:erreur={message.erreur} role={message.erreur ? 'alert' : 'status'}>{message.texte}</div>
+{/if}
 {#if suppression}
   <DialogueSuppression personneId={suppression} onfermer={() => (suppression = null)} />
 {/if}
@@ -215,6 +295,34 @@
   .avertissement {
     font-size: 0.85rem;
     color: var(--avertissement);
+  }
+  .espace {
+    flex: 1;
+  }
+  .etat-sauvegarde {
+    font-size: 0.85rem;
+    color: var(--texte-doux);
+    cursor: help;
+  }
+  .etat-sauvegarde.alerte {
+    color: var(--danger);
+  }
+  .message {
+    position: fixed;
+    left: 50%;
+    bottom: 1.25rem;
+    transform: translateX(-50%);
+    padding: 0.6rem 1rem;
+    border-radius: 8px;
+    background: var(--texte);
+    color: var(--fond);
+    box-shadow: var(--ombre);
+    max-width: min(600px, calc(100vw - 2rem));
+    z-index: 50;
+  }
+  .message.erreur {
+    background: var(--danger);
+    color: #fff;
   }
   main {
     position: relative;
