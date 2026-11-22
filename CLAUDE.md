@@ -13,6 +13,10 @@ Les données ne quittent jamais l'ordinateur : **n'ajouter aucune requête rése
   avec `npm run dev` lancé. En dev, l'URL accepte `?exemple` (charger l'arbre d'exemple), `?centre=P0009&zoom=1`
   (centrer sur une personne) et `?graine=N&taille=T[&realiste]` (afficher un arbre aléatoire des tests).
 
+## Déploiement
+GitHub Pages via `.github/workflows/pages.yml` (tests + build à chaque push sur `main`). `base: './'` dans
+`vite.config.ts` : chemins relatifs. Le site ne sert que les fichiers statiques ; les données restent dans le navigateur.
+
 ## Stack
 Vite + TypeScript strict + Svelte 5 (runes). Rendu SVG. Zod pour valider les fichiers importés.
 Placement de l'arbre écrit maison (pas d'ELK.js) : nos contraintes (partenaires sur la même ligne,
@@ -37,7 +41,8 @@ point d'union, couloirs au-dessus des cadres, écart de demi-fratrie) ne s'expri
   - `placement.ts` : ordre des lignes de haut en bas (un groupe se range sous la famille d'un seul membre « principal »,
     choisi pour minimiser les croisements interdits), passe ascendante d'orientation, puis coordonnées x par
     régression isotonique (moindres carrés sous écarts minimaux), allers-retours haut/bas.
-  - `optimisation.ts` (+ `optimisation.worker.ts`) : bouton « Recalculer ». Cherche l'ordre des groupes de chaque
+  - `optimisation.ts` (+ `optimisation.worker.ts`, lancé par `src/ui/recalcul.ts`) : case « Recalculer d'abord la disposition »
+    de la boîte Exporter/Imprimer (appliqué à l'arbre, annulable, puis export). Cherche l'ordre des groupes de chaque
     ligne qui minimise (croisements interdits, croisements, longueur des traits) : balayages par barycentre puis
     recherche locale, chaque essai évalué sur le placement réel. Déterministe (graine tirée de la disposition actuelle).
     Le résultat est stocké dans `arbre.affichage.ordre` (champ facultatif, format v2) : il fixe l'ordre des groupes

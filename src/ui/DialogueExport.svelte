@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { untrack } from 'svelte';
+  import { onDestroy, untrack } from 'svelte';
   import { documentArbre } from '../etat/document.svelte';
   import { sauvegarde } from '../etat/sauvegarde.svelte';
   import { genererImage, type FormatImage } from '../export/image';
@@ -15,7 +15,10 @@
   } from '../export/pagination';
   import { telecharger } from '../format/fichiers';
   import { nomParDefaut } from '../format/suivi';
+  import { calculerPlacement } from '../layout/index';
   import type { Placement } from '../layout/types';
+  import { appliquerDisposition } from '../model/commandes';
+  import { lancerRecalcul, messageRecalcul } from './recalcul';
   import Dialogue from './Dialogue.svelte';
 
   let props: { mode: 'exporter' | 'imprimer'; placement: Placement; onfermer: () => void; oninformer: (t: string, erreur?: boolean) => void } =
@@ -39,6 +42,32 @@
   let pages = $state<ModePages>(prefs.pages ?? 'une-page');
   let resolution = $state<number>(prefs.resolution ?? 2);
   let occupe = $state(false);
+  /** Recalculer la disposition (moins de traits qui se croisent) avant d'exporter. */
+  let recalculer = $state(false);
+  let avancement = $state<number | null>(null);
+  let arreterRecalcul: (() => void) | undefined;
+  onDestroy(() => arreterRecalcul?.());
+
+  /** Lance le recalcul et applique la disposition trouvée (annulable par Ctrl+Z). Renvoie ce qu'il faut exporter. */
+  async function recalculerDisposition(): Promise<{ placement: Placement; arbre: typeof arbre } | null> {
+    avancement = 0;
+    const r = lancerRecalcul($state.snapshot(arbre), (p) => (avancement = p));
+    arreterRecalcul = r.arreter;
+    try {
+      const res = await r.promesse;
+      if (res.ordre && documentArbre.arbre === arbre) documentArbre.executer(appliquerDisposition(arbre, res.ordre));
+      props.oninformer(messageRecalcul(res));
+      const a = documentArbre.arbre;
+      return { placement: a === arbre ? placement : calculerPlacement(a), arbre: a };
+    } catch (err) {
+      if (err instanceof Error && err.message === 'interrompu') return null;
+      props.oninformer(`Le recalcul a échoué : ${err instanceof Error ? err.message : err}`, true);
+      return { placement, arbre };
+    } finally {
+      arreterRecalcul = undefined;
+      avancement = null;
+    }
+  }
 
   $effect(() => {
     const v = { format, papier, orientation, pages, resolution };
@@ -73,19 +102,23 @@
 
   async function valider(e: Event) {
     e.preventDefault();
+    occupe = true;
+    const cible = recalculer ? await recalculerDisposition() : { placement, arbre };
+    if (!cible) return;
+    const { placement: pl, arbre: ar } = cible;
     if (mode === 'imprimer') {
+      occupe = false;
       props.onfermer();
-      imprimer(placement, arbre, { format: papier, orientation, mode: pages });
+      imprimer(pl, ar, { format: papier, orientation, mode: pages });
       return;
     }
-    occupe = true;
     try {
       if (format === 'pdf') {
         const { genererPdf } = await import('../export/pdf');
-        const { blob } = await genererPdf(placement, arbre, { format: papier, orientation, mode: pages });
+        const { blob } = await genererPdf(pl, ar, { format: papier, orientation, mode: pages });
         telecharger(blob, `${nomBase}.pdf`);
       } else {
-        const r = await genererImage(placement, arbre, format, resolution);
+        const r = await genererImage(pl, ar, format, resolution);
         telecharger(r.blob, `${nomBase}.${format === 'png' ? 'png' : 'jpg'}`);
         if (r.reduite) props.oninformer(`Résolution réduite à ${nombre(r.largeur)} × ${nombre(r.hauteur)} pixels (limite du navigateur).`);
       }
@@ -151,12 +184,22 @@
     {#if !surPapier && image.reduite}
       <p class="aide">Cette résolution dépasse ce que le navigateur peut produire : elle sera réduite.</p>
     {/if}
+    <label class="case recalcul">
+      <input type="checkbox" bind:checked={recalculer} disabled={occupe} />
+      <span>
+        Recalculer d'abord la disposition
+        <small>(réorganise les familles pour éviter les traits qui se croisent ; annulable par Ctrl+Z)</small>
+      </span>
+    </label>
+    {#if avancement !== null}
+      <progress max="1" value={avancement} aria-label="Avancement du recalcul">{Math.round(avancement * 100)} %</progress>
+    {/if}
     <p class="aide">Tout l'arbre est exporté, sur fond blanc, quelle que soit la partie visible à l'écran.</p>
   </form>
   {#snippet actions()}
     <button type="button" class="bouton" onclick={props.onfermer}>Annuler</button>
     <button type="submit" form="form-export" class="bouton principal" disabled={occupe}>
-      {occupe ? 'Préparation…' : mode === 'imprimer' ? 'Imprimer' : 'Exporter'}
+      {avancement !== null ? 'Recalcul…' : occupe ? 'Préparation…' : mode === 'imprimer' ? 'Imprimer' : 'Exporter'}
     </button>
   {/snippet}
 </Dialogue>
@@ -175,6 +218,14 @@
   }
   small {
     color: var(--texte-doux);
+  }
+  .recalcul {
+    align-items: flex-start;
+    margin: 0.5rem 0;
+  }
+  progress {
+    width: 100%;
+    height: 0.75rem;
   }
   .resume {
     font-weight: 600;
