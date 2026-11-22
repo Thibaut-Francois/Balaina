@@ -39,6 +39,13 @@ function unionCanonique(u: Union): Union {
   };
 }
 
+/** Disposition recalculée, limitée aux personnes encore présentes. */
+function affichageCanonique(arbre: Arbre): { affichage?: { ordre: string[] } } {
+  if (!arbre.affichage) return {};
+  const ids = new Set(arbre.personnes.map((p) => p.id));
+  return { affichage: { ordre: arbre.affichage.ordre.filter((id) => ids.has(id)) } };
+}
+
 /** Sérialise l'arbre en JSON lisible et stable (même arbre ⇒ même texte, hors date d'export). */
 export function exporterJSON(arbre: Arbre, maintenant: Date = new Date()): string {
   const fichier = {
@@ -47,6 +54,7 @@ export function exporterJSON(arbre: Arbre, maintenant: Date = new Date()): strin
     exporteLe: maintenant.toISOString(),
     personnes: arbre.personnes.map(personneCanonique),
     unions: arbre.unions.map(unionCanonique),
+    ...affichageCanonique(arbre),
   };
   return JSON.stringify(fichier, null, 2) + '\n';
 }
@@ -115,7 +123,11 @@ export function importerJSON(texte: string): ResultatImport {
     if (analyse.error.issues.length > 20) erreurs.push(`… et ${analyse.error.issues.length - 20} autre(s) erreur(s).`);
     return { ok: false, erreurs };
   }
-  const arbre: Arbre = { personnes: analyse.data.personnes, unions: analyse.data.unions as Union[] };
+  const arbre: Arbre = {
+    personnes: analyse.data.personnes,
+    unions: analyse.data.unions as Union[],
+    ...(analyse.data.affichage ? { affichage: analyse.data.affichage } : {}),
+  };
   const rapport = valider(arbre);
   if (rapport.erreurs.length > 0) return { ok: false, erreurs: rapport.erreurs.map((e) => e.message) };
   return { ok: true, arbre, avertissements: rapport.avertissements };

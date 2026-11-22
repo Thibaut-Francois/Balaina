@@ -45,7 +45,7 @@ test('enregistrer sans accès direct : téléchargement d’un fichier JSON vali
   const d = await telechargement;
   expect(d.suggestedFilename()).toMatch(/^arbre-genealogique-\d{4}-\d\d-\d\d\.json$/);
   const contenu = JSON.parse(readFileSync(await d.path(), 'utf8'));
-  expect(contenu).toMatchObject({ format: 'balaina-arbre', version: 1, personnes: [{ prenoms: 'Alix' }] });
+  expect(contenu).toMatchObject({ format: 'balaina-arbre', version: 2, personnes: [{ prenoms: 'Alix' }] });
   await expect(page.getByText(/Modifications non exportées/)).toHaveCount(0);
   await expect(page.getByText(`✓ ${d.suggestedFilename()}`)).toBeVisible();
 });

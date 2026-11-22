@@ -11,8 +11,8 @@ import { VERSION_ACTUELLE } from './schema';
 type Migration = (ancien: Record<string, unknown>) => Record<string, unknown>;
 
 export const MIGRATIONS: Record<number, Migration> = {
-  // Exemple pour la future version 2 :
-  // 1: (v1) => ({ ...v1, version: 2, personnes: (v1.personnes as any[]).map(...) }),
+  // v2 : ajout du champ facultatif `affichage` (disposition recalculée). Rien à transformer.
+  1: (v1) => ({ ...v1, version: 2 }),
 };
 
 export type ResultatMigration = { ok: true; donnees: Record<string, unknown> } | { ok: false; erreur: string };

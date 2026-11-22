@@ -64,11 +64,13 @@ class UnionFind {
 
 /** Groupe « porteur » d'une union : celui de son premier partenaire, sauf union coupée (géré plus tard). */
 function construireGroupes(idx: IndexArbre, coupees: Set<string>) {
+  // Positions propres à ce calcul (indépendantes de l'ordre d'affichage, qui peut être recalculé).
   const ids = [...idx.personnes.keys()];
+  const position = new Map(ids.map((id, i) => [id, i]));
   const uf = new UnionFind(ids.length);
   for (const u of idx.unions.values()) {
     if (u.partenaires.length === 2 && !coupees.has(u.id)) {
-      uf.unir(idx.rangPersonne.get(u.partenaires[0])!, idx.rangPersonne.get(u.partenaires[1])!);
+      uf.unir(position.get(u.partenaires[0])!, position.get(u.partenaires[1])!);
     }
   }
   const racineVersGroupe = new Map<number, number>();

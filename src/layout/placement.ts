@@ -49,7 +49,12 @@ export function encadrement(u: UnionPlacee, rang: Map<string, number>, ligne: st
   return { gauche: ligne[j]!, droite: ligne[j + 1]!, arche: true, porteurAGauche: false };
 }
 
-export function disposer(idx: IndexArbre, s: Structure): Disposition {
+export function disposer(
+  idx: IndexArbre,
+  s: Structure,
+  /** Disposition recalculée : rang de chaque personne listée (ordre des groupes dans chaque ligne). */
+  ordreAffichage?: Map<string, number>,
+): Disposition {
   const nbLignes = Math.max(0, ...s.groupes.map((g) => g.ligne + 1));
   const ligneDe = new Map<string, number>();
   for (const g of s.groupes) for (const c of g.sequence) ligneDe.set(c, g.ligne);
@@ -298,7 +303,20 @@ export function disposer(idx: IndexArbre, s: Structure): Disposition {
         (a, b) =>
           (a.cleTri === b.cleTri ? 0 : a.cleTri < b.cleTri ? -1 : 1) || a.rang - b.rang || (a.cles[0]! < b.cles[0]! ? -1 : 1),
       );
-      const ligne = unites.flatMap((u) => u.cles);
+      // Disposition recalculée : les groupes qui y figurent reprennent exactement l'ordre enregistré,
+      // dans les places qu'ils occupent ; les autres (ajoutés depuis) restent près de leurs parents.
+      let ordonnees = unites;
+      if (ordreAffichage) {
+        const rangUnite = (u: Unite) => {
+          let r = Infinity;
+          for (const c of u.cles) if (c.startsWith('P:')) r = Math.min(r, ordreAffichage.get(c.slice(2)) ?? Infinity);
+          return r;
+        };
+        const fixees = unites.filter((u) => rangUnite(u) < Infinity).sort((a, b) => rangUnite(a) - rangUnite(b));
+        let k = 0;
+        ordonnees = unites.map((u) => (rangUnite(u) < Infinity ? fixees[k++]! : u));
+      }
+      const ligne = ordonnees.flatMap((u) => u.cles);
       lignes.push(ligne);
       rangs.push(new Map(ligne.map((c, i) => [c, i])));
       // placement compact provisoire

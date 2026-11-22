@@ -64,6 +64,12 @@ export interface Union {
 export interface Arbre {
   personnes: Personne[];
   unions: Union[];
+  /**
+   * Disposition choisie par « Recalculer » : ordre de priorité des personnes pour le placement
+   * (remplace l'ordre de création ; les personnes absentes de la liste passent après, dans l'ordre de création).
+   * Absent : placement par ordre de création.
+   */
+  affichage?: { ordre: string[] };
 }
 
 export const arbreVide = (): Arbre => ({ personnes: [], unions: [] });

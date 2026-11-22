@@ -46,7 +46,7 @@ describe('aller-retour', () => {
     const texte = exporterJSON(chargerExemple(), DATE);
     const brut = JSON.parse(texte);
     expect(brut.format).toBe('balaina-arbre');
-    expect(brut.version).toBe(1);
+    expect(brut.version).toBe(2);
     expect(texte).toContain('\n  "personnes": [');
   });
 });
@@ -92,6 +92,22 @@ describe('import invalide : messages clairs', () => {
 });
 
 describe('migrations', () => {
+  it('un fichier en version 1 (l’exemple) s’ouvre et passe en version 2 sans perte', () => {
+    const v1 = readFileSync('exemples/famille-complexe.json', 'utf8');
+    expect(JSON.parse(v1).version).toBe(1);
+    const r = importerJSON(v1);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.arbre.personnes).toHaveLength(24);
+    expect(JSON.parse(exporterJSON(r.arbre, DATE)).version).toBe(2);
+  });
+
+  it('la disposition recalculée fait l’aller-retour, limitée aux personnes présentes', () => {
+    const a = { ...chargerExemple(), affichage: { ordre: ['P0003', 'P0001', 'P9999'] } };
+    const r = importerJSON(exporterJSON(a, DATE));
+    expect(r.ok && r.arbre.affichage).toEqual({ ordre: ['P0003', 'P0001'] });
+  });
+
   it('applique la chaîne de migrations jusqu’à la version cible', () => {
     const migrations = {
       1: (d: Record<string, unknown>) => ({ ...d, version: 2, ajout: 'v2' }),

@@ -37,6 +37,11 @@ point d'union, couloirs au-dessus des cadres, écart de demi-fratrie) ne s'expri
   - `placement.ts` : ordre des lignes de haut en bas (un groupe se range sous la famille d'un seul membre « principal »,
     choisi pour minimiser les croisements interdits), passe ascendante d'orientation, puis coordonnées x par
     régression isotonique (moindres carrés sous écarts minimaux), allers-retours haut/bas.
+  - `optimisation.ts` (+ `optimisation.worker.ts`) : bouton « Recalculer ». Cherche l'ordre des groupes de chaque
+    ligne qui minimise (croisements interdits, croisements, longueur des traits) : balayages par barycentre puis
+    recherche locale, chaque essai évalué sur le placement réel. Déterministe (graine tirée de la disposition actuelle).
+    Le résultat est stocké dans `arbre.affichage.ordre` (champ facultatif, format v2) : il fixe l'ordre des groupes
+    qui y figurent ; les personnes ajoutées ensuite se placent près de leurs parents (stabilité préservée).
   - `routage.ts` : traits orthogonaux ; arches au-dessus des cadres pour les partenaires éloignés ; barres de fratrie
     dans des couloirs entre lignes (pistes attribuées pour limiter les croisements) ; relais pour les filiations longues.
 - Tests du placement : `tests/invariants.ts` vérifie toutes les règles d'affichage ; il est appliqué à l'exemple,
@@ -59,11 +64,12 @@ point d'union, couloirs au-dessus des cadres, écart de demi-fratrie) ne s'expri
 - Vocabulaire neutre partout : parent, enfant, partenaire, union. Jamais père/mère/mari/femme.
 - Bloquant : cycle d'ascendance, structure invalide. **Jamais bloquant** : incohérence de dates (simple avertissement).
 - Ordre des tableaux `personnes` / `unions` = ordre de création. Il sert au placement stable : ne jamais retrier.
+  La disposition recalculée vit à part, dans `affichage.ordre` (jamais en réordonnant les tableaux).
 - Ordre des unions d'une personne : datées (début, sinon naissance du 1er enfant) triées, puis non datées en ordre de création.
 - Ordre des enfants : datés par naissance (le tableau `enfants` départage), puis non datés dans l'ordre du tableau.
 
 ## Format de fichier
-`{ format: "balaina-arbre", version, exporteLe, personnes, unions }`, JSON indenté, clés en ordre fixe.
+`{ format: "balaina-arbre", version: 2, exporteLe, personnes, unions, affichage? }` (v1 → v2 : ajout d'`affichage`), JSON indenté, clés en ordre fixe.
 Pour changer le format : incrémenter `VERSION_ACTUELLE` (`src/format/schema.ts`), ajouter une migration
 dans `src/format/migrations.ts`, garder un fichier de l'ancienne version dans les tests.
 Le test d'aller-retour (export → import → export identique) doit toujours passer.

@@ -216,7 +216,8 @@ export function supprimerPersonne(arbre: Arbre, id: string): Resultat {
     if (partenaires.length === 0) continue;
     unions.push({ ...u, partenaires: partenaires as Union['partenaires'], enfants });
   }
-  return conclure({ personnes: arbre.personnes.filter((p) => p.id !== id), unions });
+  const affichage = arbre.affichage ? { affichage: { ordre: arbre.affichage.ordre.filter((x) => x !== id) } } : {};
+  return conclure({ personnes: arbre.personnes.filter((p) => p.id !== id), unions, ...affichage });
 }
 
 // ---------- Unions ----------
@@ -267,4 +268,11 @@ export function deplacerEnfant(arbre: Arbre, unionId: string, enfantId: string, 
   const dates = ordre.filter((e) => idx.personnes.get(e)?.naissance);
   const unions = arbre.unions.map((x) => (x.id === unionId ? { ...x, enfants: [...dates, ...sansDate] } : x));
   return conclure({ ...arbre, unions });
+}
+
+// ---------- Disposition ----------
+
+/** Enregistre une disposition recalculée (ordre des groupes de chaque ligne) dans l'arbre. */
+export function appliquerDisposition(arbre: Arbre, ordre: string[]): Resultat {
+  return conclure({ ...arbre, affichage: { ordre: [...ordre] } });
 }

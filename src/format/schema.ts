@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { erreurDate } from '../model/dates';
 
 export const FORMAT = 'balaina-arbre';
-export const VERSION_ACTUELLE = 1;
+export const VERSION_ACTUELLE = 2;
 
 const identifiant = z.string().min(1, 'identifiant vide');
 
@@ -54,6 +54,7 @@ export const schemaFichier = z
     exporteLe: z.string().datetime().optional(),
     personnes: z.array(personne),
     unions: z.array(union),
+    affichage: z.object({ ordre: z.array(identifiant) }).strict().optional(),
   })
   .strict();
 

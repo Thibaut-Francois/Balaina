@@ -11,6 +11,7 @@
   import DialogueAjout from './DialogueAjout.svelte';
   import DialogueExport from './DialogueExport.svelte';
   import DialogueOuverture from './DialogueOuverture.svelte';
+  import DialogueRecalcul from './DialogueRecalcul.svelte';
   import DialogueSuppression from './DialogueSuppression.svelte';
   import FichePersonne from './FichePersonne.svelte';
   import MenuPersonne from './MenuPersonne.svelte';
@@ -32,6 +33,7 @@
   let ajout = $state<{ mode: ModeAjout; personneId?: string; unionId?: string } | null>(null);
   let suppression = $state<string | null>(null);
   let exportation = $state<'exporter' | 'imprimer' | null>(null);
+  let recalcul = $state(false);
   let ouverture = $state<Exclude<ResultatOuverture, { statut: 'annule' }> | null>(null);
   /** Message bref en bas de l'écran (enregistrement réussi, erreur…). */
   let message = $state<{ texte: string; erreur?: boolean } | null>(null);
@@ -180,6 +182,12 @@
     </div>
     {#if arbre.personnes.length > 0}
       <button type="button" class="bouton" onclick={() => vue?.ajuster()}>Ajuster à l'écran</button>
+      <button
+        type="button"
+        class="bouton"
+        onclick={() => (recalcul = true)}
+        title="Recalculer l'emplacement de toutes les personnes pour éviter les traits qui se croisent">Recalculer</button
+      >
       <div class="groupe">
         <button type="button" class="bouton" onclick={() => (exportation = 'exporter')} title="PDF, PNG ou JPEG de tout l'arbre">Exporter…</button>
         <button type="button" class="bouton" onclick={() => (exportation = 'imprimer')} title="Imprimer tout l'arbre (Ctrl+P)">Imprimer…</button>
@@ -276,6 +284,9 @@
       else personneSelectionnee = id;
     }}
   />
+{/if}
+{#if recalcul}
+  <DialogueRecalcul onfermer={() => (recalcul = false)} oninformer={informer} />
 {/if}
 {#if exportation}
   <DialogueExport mode={exportation} {placement} onfermer={() => (exportation = null)} oninformer={informer} />
